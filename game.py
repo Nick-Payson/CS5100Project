@@ -34,6 +34,12 @@ class Agent:
     def setEvalFunction(self, evaluationFunction):
         self.evaluationFunction = evaluationFunction
 
+    def setPieces(self, pieces: [[Piece]]):
+        self.pieces = pieces
+
+    def setColor(self, color: str):
+        self.color = color
+
     def getAction(self, gameState: GameState):
         """
         The Agent will receive a GameState and
@@ -104,9 +110,39 @@ class Agent:
         if wc != 0:
             return wc
 
-        #todo count number of "threats" (places with 2/3 for one color) for each player
+        threatCounts = {"b": 0, "o": 0}
+        for c in threatCounts:
+            for row in range(3):
+                piecesInRow = 3
+                piecesInCol = 3
+                for col in range(3):
+                    if str(self.board[row][col])[0:1:1] != c:
+                        piecesInRow = piecesInRow - 1
+                    if str(self.board[col][row])[0:1:1] != c:
+                        piecesInCol = piecesInCol - 1
+                if piecesInRow >= 2:
+                    threatCounts[c] += 1
+                if piecesInCol >= 2:
+                    threatCounts[c] += 1
 
-        return 0
+            diagonalPieces = 3
+            otherDiagonalPieces = 3
+            for i in range(3):
+                if str(self.board[i][i])[0:1:1] != c:
+                    diagonalPieces -= 1
+                if str(self.board[i][2 - i])[0:1:1] != c:
+                    otherDiagonalPieces -= 1
+
+            if diagonalPieces >= 2:
+                threatCounts[c] += 1
+            if otherDiagonalPieces >= 2:
+                threatCounts[c] += 1
+
+        netThreats = threatCounts["o"] - threatCounts["b"]
+        if self.color == "b":
+            netThreats *= -1
+
+        return netThreats
 
     def topLayerPieceLocationEvaluationFunction(self, state: GameState) -> float:
         wc = self.winConditionEvaluationFunction(state=state)
@@ -129,7 +165,7 @@ class Agent:
                 sum_pieces += val
         return sum_pieces
 
-    #todo more eval functions
+    #todo more eval functions like -valueOfPiecesInHand, combined ones with threats
 
     def __deepcopy__(self, memodict={}):
         new_color = self.color
@@ -146,7 +182,7 @@ class GameState:
         self.board = board
         self.blue = blue
         self.orange = orange
-        self.blueToMove = blue_to_move  # Blue goes first
+        self.blueToMove = blue_to_move
 
     def isOver(self):
         return self.orangeWin() or self.blueWin()
@@ -256,7 +292,7 @@ class GameState:
     def __hash__(self):
         # Hash the game state (board and whose turn it is) for transposition tables
         board_strings = self.board.get_board_strings()
-        return hash((board_strings[0] + board_strings[1] + board_strings[2], self.blueToMove))
+        return hash(board_strings[0] + board_strings[1] + board_strings[2] + str(self.blueToMove))
 
     def get_symmetries(self):
         # Return a list of hashes for all symmetrical boards for transposition tables, and the type of symmetry
@@ -265,7 +301,10 @@ class GameState:
         symmetry_list = []
 
         for s in symmetry_types:
-            h = self.board.produce_symmetry(symmetry_type=s).__hash__()
+            board = self.board.produce_symmetry(symmetry_type=s)
+            board_strings = board.get_board_strings()
+            h = hash(board_strings[0] + board_strings[1] + board_strings[2] + str(self.blueToMove))
+            #print(str(board) + " " + str(h))
             symmetry_list.append((h, s))
 
         return symmetry_list

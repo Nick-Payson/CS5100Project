@@ -12,7 +12,7 @@ class HumanAtKeyboard(Agent):
     "An agent that takes human input from the keyboard for commands"
 
     def __init__(self, pieces, c: str):
-       super().__init__(pieces, color=c)
+        super().__init__(pieces, color=c)
 
     def getAction(self, state: GameState):
         board: BoardState = state.board
@@ -60,26 +60,27 @@ class RandomAgent(Agent):
     "An agent that chooses its move randomly among all possible moves"
 
     def __init__(self, pieces, c: str):
-       super().__init__(pieces, color=c)
+        super().__init__(pieces, color=c)
 
-    def getAction(self, state: GameState):
-        if state.blueToMove:
-            agent = state.blue
+    def getAction(self, gameState: GameState):
+        if gameState.blueToMove:
+            agent = gameState.blue
         else:
-            agent = state.orange
-        possible_actions = state.getLegalActions(agent.color)
+            agent = gameState.orange
+        possible_actions = gameState.getLegalActions(agent.color)
         return random.choice(possible_actions)
 
     def __deepcopy__(self, memodict={}):
         new_agent: RandomAgent = super().__deepcopy__()
         return new_agent
 
+
 class MinimaxAgent(Agent):
     """
     A basic minimax agent
     """
 
-    def __init__(self, pieces, c: str, depth: int, evaluationFunction= lambda x: 0):
+    def __init__(self, pieces, c: str, depth: int, evaluationFunction=lambda x: 0):
         self.depth = depth
         super().__init__(pieces, color=c, evaluationFunction=evaluationFunction)
 
@@ -131,10 +132,10 @@ class MinimaxAgent(Agent):
         return best_val, None
 
     def __deepcopy__(self, memodict={}):
-
         new_eval_function = self.evaluationFunction
         new_pieces = copy.deepcopy(self.pieces)
         return MinimaxAgent(pieces=new_pieces, evaluationFunction=new_eval_function, c=self.color, depth=self.depth)
+
 
 class AlphaBetaMinimaxAgent(Agent):
     """
@@ -192,11 +193,17 @@ class AlphaBetaMinimaxAgent(Agent):
         else:
             agent = state.orange
         possible_actions = state.getLegalActions(agentColor=agent.color)
-        #print("board: " + str(state.board))
+        #if depth == 0:
+            #print("ab max board:\n" + str(state.board))
+            #print(possible_actions)
+            #print("evals to" + str(self.evaluationFunction.__call__(self, state=state)))
         for act in possible_actions:
-            #print("evaluating action " + str(act))
+            """if depth == 0:
+                print("evaluating action " + str(act))"""
             new_state = state.generateSuccessor(agentColor=agent.color, action=act)
             next_value, action = self.ab_min_agent(state=new_state, depth=depth, a=a, b=b)
+            """if depth == 0:
+                print("generated:" + str(next_value))"""
 
             if next_value > value or chosen_move is None:
                 value = next_value
@@ -212,7 +219,9 @@ class AlphaBetaMinimaxAgent(Agent):
 
         new_eval_function = self.evaluationFunction
         new_pieces = copy.deepcopy(self.pieces)
-        return AlphaBetaMinimaxAgent(pieces=new_pieces, evaluationFunction=new_eval_function, c=self.color, depth=self.depth)
+        return AlphaBetaMinimaxAgent(pieces=new_pieces, evaluationFunction=new_eval_function, c=self.color,
+                                     depth=self.depth)
+
 
 class TranspositionAgent(Agent):
     """
@@ -220,22 +229,25 @@ class TranspositionAgent(Agent):
     additionally using transposition tables to avoid re-computing symmetrical boards
     """
 
-    def __init__(self, pieces, c: str, depth: int, evaluationFunction=lambda x: 0, moveDictionary: str = ""):
+    def __init__(self, pieces, c: str, depth: int, evaluationFunction=lambda x: 0, storage_file_name: str = "moveStorage", moveDictionary = {}):
         self.depth = depth
-        self.moveDictionary = {}
-        # will store tuples at each key like moveDictionary[hashedGameState] = (move, depthExploredPastIt)
-
-        if moveDictionary != "":
-            move_dict_path = './' + moveDictionary + '.pkl'
-
-            if not os.path.isfile(move_dict_path):
-                with open(move_dict_path, 'wb') as fp:
-                    pickle.dump({}, fp)
-
-            with open(move_dict_path, 'rb') as fp:
-                self.moveDictionary = pickle.load(fp)
-
+        self.storage_file_name = storage_file_name
+        self.storage_file_path = './' + storage_file_name + '.pkl'
+        self.moveDictionary = moveDictionary
+        # will store tuples at each key like
+        # moveDictionary[hashedGameState] = (move, depthExploredPastIt, bestValueAfterMoveToDepthPastIt)
         super().__init__(pieces, color=c, evaluationFunction=evaluationFunction)
+
+    def initializeFromFile(self):
+        if not os.path.isfile(self.storage_file_path):
+            with open(self.storage_file_path, 'wb') as fp:
+                pickle.dump({}, fp)
+
+        with open(self.storage_file_path, 'rb') as fp:
+            self.moveDictionary = pickle.load(fp)
+    def dumpToFile(self):
+        with open(self.storage_file_path, 'wb') as fp:
+            pickle.dump(self.moveDictionary, fp)
 
     def getAction(self, gameState: GameState):
         """
@@ -277,15 +289,18 @@ class TranspositionAgent(Agent):
         if depth >= self.depth or state.isOver():
             return self.evaluationFunction.__call__(self, state=state), None
 
-        lookup_move = self.moveDictionary.get(state.__hash__(), None)
+        lookup_move = self.moveDictionary.get(hash(state), None)
         if lookup_move is not None:
+            #print("looked up a move")
             # found a move already computed for this position
             looked_up_move_depth = lookup_move[1]
             looked_up_move = lookup_move[0]
+            looked_up_move_value = lookup_move[2]
 
             if looked_up_move_depth >= self.depth - depth:
+                #print("used a looked up move")
                 # the move was computed with at least the depth we are computing it to with this call
-                return self.evaluationFunction.__call__(self, state=state), looked_up_move
+                return looked_up_move_value, looked_up_move
 
         value = float('-inf')
         chosen_move = None
@@ -294,9 +309,9 @@ class TranspositionAgent(Agent):
         else:
             agent = state.orange
         possible_actions = state.getLegalActions(agentColor=agent.color)
-        #print("board: " + str(state.board))
+        # print("board: " + str(state.board))
         for act in possible_actions:
-            #print("evaluating action " + str(act))
+            # print("evaluating action " + str(act))
             new_state = state.generateSuccessor(agentColor=agent.color, action=act)
             next_value, action = self.ab_min_agent(state=new_state, depth=depth, a=a, b=b)
 
@@ -308,12 +323,12 @@ class TranspositionAgent(Agent):
                 return b, act
             a = max(a, value)
 
-        self.add_symmetries_to_dictionary(state=state, the_move=chosen_move, depth=depth)
+        self.add_symmetries_to_dictionary(state=state, the_move=chosen_move, best_value=value, depth=depth)
         return value, chosen_move
 
-    def add_symmetries_to_dictionary(self, state: GameState, the_move, depth: int):
-        #todo
+    def add_symmetries_to_dictionary(self, state: GameState, the_move, best_value: float, depth: int):
         symmetries = state.get_symmetries()
+
         for _sym in symmetries:
             h = _sym[0]
             sym_type = _sym[1]
@@ -326,82 +341,60 @@ class TranspositionAgent(Agent):
 
                 if looked_up_move_depth < self.depth - depth:
                     # we computed the move to deeper than it was already computed
-                    self.moveDictionary[h] = (new_move, self.depth - depth)
+                    self.moveDictionary[h] = (new_move, self.depth - depth, best_value)
             else:
-                self.moveDictionary[h] = (new_move, self.depth - depth)
+                self.moveDictionary[h] = (new_move, self.depth - depth, best_value)
 
         return
 
     def alter_move_for_symmetry(self, the_move, symmetry_type: str):
-        #todo ["Initial", "Flip X", "Flip Y", "Rotate 90", "Rotate 180", "Rotate 270", "Diagonal Flip y=x", "Diagonal Flip y=-x"]
         start_row = the_move[0][0]
         start_col = the_move[0][1]
         end_row = the_move[1][0]
         end_col = the_move[1][1]
 
-        #todo remove these declarations after done with method
-        #todo the transitions are WHERE YOU END UP AFTER THE MOVE
-        new_start_row = 0
-        new_start_col = 0
-        new_end_row = 0
-        new_end_col = 0
         if symmetry_type == "Initial":
-            new_start_row = start_row
-            new_start_col = start_col
-            new_end_row = end_row
-            new_end_col = end_col
+            return the_move
         elif symmetry_type == "Flip X":
-            new_start_row = start_row
-            new_start_col = 2 - start_col
-            new_end_row = end_row
-            new_end_col = 2 - end_col
+            coordinate_pairs = {(-3, -3): (-3, -3), (-2, -2): (-2, -2), (-1, -1): (-1, -1),
+                                (0, 0): (0, 2), (0, 1): (0, 1), (0, 2): (0, 0),
+                                (1, 0): (1, 2), (1, 1): (1, 1), (1, 2): (1, 0),
+                                (2, 0): (2, 2), (2, 1): (2, 1), (2, 2): (2, 0)}
         elif symmetry_type == "Flip Y":
-            new_start_row = 2 - start_row
-            new_start_col = start_col
-            new_end_row = 2 - end_row
-            new_end_col = end_col
+            coordinate_pairs = {(-3, -3): (-3, -3), (-2, -2): (-2, -2), (-1, -1): (-1, -1),
+                                (0, 0): (2, 0), (0, 1): (2, 1), (0, 2): (2, 2),
+                                (1, 0): (1, 0), (1, 1): (1, 1), (1, 2): (1, 2),
+                                (2, 0): (0, 0), (2, 1): (0, 1), (2, 2): (0, 2)}
         elif symmetry_type == "Rotate 90":
-            coordinate_pairs = {(0, 0): (0, 2), (0, 1): (1, 2), (0, 2): (2, 2),
+            coordinate_pairs = {(-3, -3): (-3, -3), (-2, -2): (-2, -2), (-1, -1): (-1, -1),
+                                (0, 0): (0, 2), (0, 1): (1, 2), (0, 2): (2, 2),
                                 (1, 0): (0, 1), (1, 1): (1, 1), (1, 2): (2, 1),
                                 (2, 0): (0, 0), (2, 1): (1, 0), (2, 2): (2, 0)}
-
-            new_start_row, new_start_col = coordinate_pairs[(start_row, start_col)]
-            new_end_row, new_end_col = coordinate_pairs[(end_row, end_col)]
-
         elif symmetry_type == "Rotate 180":
-            coordinate_pairs = {(0, 0): (2, 2), (0, 1): (2, 1), (0, 2): (2, 0),
+            coordinate_pairs = {(-3, -3): (-3, -3), (-2, -2): (-2, -2), (-1, -1): (-1, -1),
+                                (0, 0): (2, 2), (0, 1): (2, 1), (0, 2): (2, 0),
                                 (1, 0): (1, 2), (1, 1): (1, 1), (1, 2): (1, 0),
                                 (2, 0): (0, 2), (2, 1): (0, 1), (2, 2): (0, 0)}
-
-            new_start_row, new_start_col = coordinate_pairs[(start_row, start_col)]
-            new_end_row, new_end_col = coordinate_pairs[(end_row, end_col)]
         elif symmetry_type == "Rotate 270":
-            coordinate_pairs = {(0, 0): (2, 0), (0, 1): (1, 0), (0, 2): (0, 0),
+            coordinate_pairs = {(-3, -3): (-3, -3), (-2, -2): (-2, -2), (-1, -1): (-1, -1),
+                                (0, 0): (2, 0), (0, 1): (1, 0), (0, 2): (0, 0),
                                 (1, 0): (2, 1), (1, 1): (1, 1), (1, 2): (1, 0),
                                 (2, 0): (2, 2), (2, 1): (1, 2), (2, 2): (0, 2)}
-
-            new_start_row, new_start_col = coordinate_pairs[(start_row, start_col)]
-            new_end_row, new_end_col = coordinate_pairs[(end_row, end_col)]
         elif symmetry_type == "Diagonal Flip y=x":
-            coordinate_pairs = {(0, 0): (2, 2), (0, 1): (1, 2), (0, 2): (0, 2),
+            coordinate_pairs = {(-3, -3): (-3, -3), (-2, -2): (-2, -2), (-1, -1): (-1, -1),
+                                (0, 0): (2, 2), (0, 1): (1, 2), (0, 2): (0, 2),
                                 (1, 0): (2, 1), (1, 1): (1, 1), (1, 2): (0, 1),
                                 (2, 0): (2, 0), (2, 1): (1, 0), (2, 2): (0, 0)}
-
-            new_start_row, new_start_col = coordinate_pairs[(start_row, start_col)]
-            new_end_row, new_end_col = coordinate_pairs[(end_row, end_col)]
         elif symmetry_type == "Diagonal Flip y=-x":
-            coordinate_pairs = {(0, 0): (0, 0), (0, 1): (1, 0), (0, 2): (2, 0),
+            coordinate_pairs = {(-3, -3): (-3, -3), (-2, -2): (-2, -2), (-1, -1): (-1, -1),
+                                (0, 0): (0, 0), (0, 1): (1, 0), (0, 2): (2, 0),
                                 (1, 0): (0, 1), (1, 1): (1, 1), (1, 2): (2, 1),
                                 (2, 0): (0, 2), (2, 1): (1, 2), (2, 2): (2, 2)}
-
-            new_start_row, new_start_col = coordinate_pairs[(start_row, start_col)]
-            new_end_row, new_end_col = coordinate_pairs[(end_row, end_col)]
         else:
             return Exception("unrecognized symmetry type: " + symmetry_type)
 
-        if start_row < 0:  # putting new piece down can't be flipped
-            new_start_row = start_row
-            new_start_col = start_col
+        new_start_row, new_start_col = coordinate_pairs[(start_row, start_col)]
+        new_end_row, new_end_col = coordinate_pairs[(end_row, end_col)]
 
         return [(new_start_row, new_start_col), (new_end_row, new_end_col)]
 
@@ -409,6 +402,8 @@ class TranspositionAgent(Agent):
 
         new_eval_function = self.evaluationFunction
         new_pieces = copy.deepcopy(self.pieces)
-        return AlphaBetaMinimaxAgent(pieces=new_pieces, evaluationFunction=new_eval_function, c=self.color, depth=self.depth)
+        #Don't copy the dictionary because we want the agent to add to it from all game tree paths
+        return TranspositionAgent(pieces=new_pieces, evaluationFunction=new_eval_function, c=self.color,
+                                     depth=self.depth, storage_file_name=self.storage_file_name, moveDictionary=self.moveDictionary)
 
-#todo more agents: transposition tables, move sorting, iterative deepening
+# todo more agents: transposition tables, move sorting, iterative deepening

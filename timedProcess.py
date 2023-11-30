@@ -31,6 +31,7 @@ class TimedProcessSeries():
             self.completionTimes.append(end - start)
 
     def getMinTime(self):
+        print(self.completionTimes)
         return min(*self.completionTimes)
 
     def getMaxTime(self):

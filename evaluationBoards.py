@@ -19,8 +19,8 @@ start_board_top_layer = "__ __ __ \n__ __ __ \n__ __ __ "
 START_BOARD = BoardState(bottom_string=start_board_bottom_layer,
                          middle_string=start_board_middle_layer,
                          top_string=start_board_top_layer)
-START_ORANGE_PIECES = None
-START_BLUE_PIECES = None
+START_ORANGE_PIECES = [[Piece("o", 1), Piece("o", 1)], [Piece("o", 2), Piece("o", 2)], [Piece("o", 3), Piece("o", 3)]]
+START_BLUE_PIECES = [[Piece("b", 1), Piece("b", 1)], [Piece("b", 2), Piece("b", 2)], [Piece("b", 3), Piece("b", 3)]]
 
 # Two Turn Win (ttw) Board - blue player can win in two turns if they go next
 ttw_board_bottom_layer = "__ __ __ \n__ __ __ \n__ __ __ "
@@ -42,18 +42,18 @@ CROWDED_BOARD = BoardState(bottom_string=crowded_board_bottom_layer,
 CROWDED_ORANGE_PIECES = [[Piece("o", 1)], [], []]
 CROWDED_BLUE_PIECES = [[Piece("b", 1)], [], []]
 
-# Simple Board - Board with a couple pieces on it
+# Simple Board - Board with a couple pieces on it, use with blue to move
 simple_board_bottom_layer = "__ __ __ \n__ __ __ \no1 __ o1 "
 simple_board_middle_layer = "__ __ __ \n__ __ __ \n__ b2 __ "
-simple_board_top_layer = "__ __ __ \n__ b3 __ \n__ __ __ "
+simple_board_top_layer = "__ __ __ \n__ __ __ \n__ __ __ "
 SIMPLE_BOARD = BoardState(bottom_string=simple_board_bottom_layer,
                        middle_string=simple_board_middle_layer,
                        top_string=simple_board_top_layer)
 SIMPLE_ORANGE_PIECES = [[], [Piece("o", 2), Piece("o", 2)], [Piece("o", 3), Piece("o", 3)]]
-SIMPLE_BLUE_PIECES = [[Piece("b", 1), Piece("b", 1)], [Piece("b", 2)], [Piece("b", 3)]]
+SIMPLE_BLUE_PIECES = [[Piece("b", 1), Piece("b", 1)], [Piece("b", 2)], [Piece("b", 3), Piece("b", 3)]]
 
 # Low Level Board - Board with some pieces on it, all on low level
-low_board_bottom_layer = "__ b1 __ \n__ __ __ \no1 b1 o1 "
+low_board_bottom_layer = "b1 __ __ \n__ __ __ \no1 b1 o1 "
 low_board_middle_layer = "__ __ __ \n__ __ __ \n__ __ __ "
 low_board_top_layer = "__ __ __ \n__ __ __ \n__ __ __ "
 LOW_BOARD = BoardState(bottom_string=low_board_bottom_layer,
@@ -64,7 +64,7 @@ LOW_BLUE_PIECES = [[], [Piece("b", 2), Piece("b", 2)], [Piece("b", 3), Piece("b"
 
 # Middle Level Board - Board with some pieces on it, all on middle level
 mid_board_bottom_layer = "__ __ __ \n__ __ __ \n__ __ __ "
-mid_board_middle_layer = "__ b2 __ \n__ __ __ \no2 b2 o2 "
+mid_board_middle_layer = "b2 __ __ \n__ __ __ \no2 b2 o2 "
 mid_board_top_layer = "__ __ __ \n__ __ __ \n__ __ __ "
 MID_BOARD = BoardState(bottom_string=mid_board_bottom_layer,
                        middle_string=mid_board_middle_layer,
