@@ -3,11 +3,9 @@ from piece import Piece
 class Square:
     "a square on the board"
     pieces: [Piece] # three pieces, last one is largest
-    max_current_size: int
 
     def __init__(self, p: [Piece] = [None, None, None]):
         self.pieces = [None, None, None]
-        self.max_current_size = 0
         for _p in p:
             if _p is not None:
                 self.add_piece(_p)
@@ -16,11 +14,14 @@ class Square:
         return self.pieces
 
     def add_piece(self, p: Piece):
-        self.pieces[p.size - 1] = p
-        self.max_current_size = p.size
+        if self.pieces[p.size - 1] is None:
+            self.pieces[p.size - 1] = p
 
     def can_add_piece(self, p: Piece) -> bool:
-        return p.size > self.max_current_size
+        for i in range(3):
+            if p.size <= i + 1 and self.pieces[i] is not None:
+                return False
+        return True
 
     def get_top_piece(self) -> Piece:
         p = None
@@ -39,6 +40,7 @@ class Square:
                 self.pieces[2 - i] = None
                 return p
         return None
+
 
     def __str__(self) -> str:
         p = self.get_top_piece()

@@ -116,9 +116,9 @@ class Agent:
                 piecesInRow = 3
                 piecesInCol = 3
                 for col in range(3):
-                    if str(self.board[row][col])[0:1:1] != c:
+                    if str(state.board.board[row][col])[0:1:1] != c:
                         piecesInRow = piecesInRow - 1
-                    if str(self.board[col][row])[0:1:1] != c:
+                    if str(state.board.board[col][row])[0:1:1] != c:
                         piecesInCol = piecesInCol - 1
                 if piecesInRow >= 2:
                     threatCounts[c] += 1
@@ -128,9 +128,9 @@ class Agent:
             diagonalPieces = 3
             otherDiagonalPieces = 3
             for i in range(3):
-                if str(self.board[i][i])[0:1:1] != c:
+                if str(state.board.board[i][i])[0:1:1] != c:
                     diagonalPieces -= 1
-                if str(self.board[i][2 - i])[0:1:1] != c:
+                if str(state.board.board[i][2 - i])[0:1:1] != c:
                     otherDiagonalPieces -= 1
 
             if diagonalPieces >= 2:
