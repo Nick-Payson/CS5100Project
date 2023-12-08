@@ -8,7 +8,7 @@ import evaluationBoards
 from board import BoardState
 from piece import Piece
 from game import GameState, Agent
-from gameAgents import HumanAtKeyboard, MinimaxAgent, AlphaBetaMinimaxAgent, RandomAgent, TranspositionAgent
+from gameAgents import HumanAtKeyboard, MinimaxAgent, AlphaBetaMinimaxAgent, RandomAgent, TranspositionAgent, MoveSortingAgent
 from timedProcess import TimedProcess, TimedProcessSeries
 import os
 import sys
@@ -102,13 +102,13 @@ def time_moves_for_agent(agent: Agent, boards: [BoardState], board_names: [str],
     for i in range(len(boards)):
         if color_to_move_booleans[i]:  # agent should be blue
             agent.setColor("b")
-            agent.setPieces(blue_pieces[i])
-            game = GameState(blue=agent, orange=RandomAgent(orange_pieces[i], "o"), blue_to_move=True, board=boards[i])
+            agent.setPieces(deepcopy(blue_pieces[i]))
+            game = GameState(blue=agent, orange=RandomAgent(deepcopy(orange_pieces[i]), "o"), blue_to_move=True, board=boards[i])
 
         else:  # agent is orange
             agent.setColor("o")
-            agent.setPieces(orange_pieces[i])
-            game = GameState(blue=RandomAgent(blue_pieces[i], "b"), orange=agent, blue_to_move=False, board=boards[i])
+            agent.setPieces(deepcopy(orange_pieces[i]))
+            game = GameState(blue=RandomAgent(deepcopy(blue_pieces[i]), "b"), orange=agent, blue_to_move=False, board=boards[i])
 
         tps = TimedProcess(_object=agent, f="getAction", params={"gameState": game})
         tps.run()
@@ -148,13 +148,15 @@ if __name__ == '__main__':
     ab = AlphaBetaMinimaxAgent(evaluationBoards.START_BLUE_PIECES, "b", 2)
     # ab_1 = AlphaBetaMinimaxAgent(evaluationBoards.START_ORANGE_PIECES, "o", 1)
     t = TranspositionAgent(evaluationBoards.START_ORANGE_PIECES, "o", 2, storage_file_name="testing")
-    r = RandomAgent(evaluationBoards.START_BLUE_PIECES, "b")
+    r = RandomAgent(evaluationBoards.START_ORANGE_PIECES, "o")
     # game = GameState(blue=ab, orange=h, blue_to_move=True, board=board)
     # game2 = GameState(blue=ab, orange=r, blue_to_move=True, board=empty_board)
     game3 = GameState(blue=r, orange=t, blue_to_move=True, board=empty_board)
     ab.setEvalFunction(Agent.topLayerWeightedSizeEvaluationFunction)
     # ab_1.setEvalFunction(Agent.topLayerWeightedSizeEvaluationFunction)
     t.setEvalFunction(Agent.topLayerWeightedSizeEvaluationFunction)
+    ms = MoveSortingAgent(evaluationBoards.START_ORANGE_PIECES, "o", 2, storage_file_name="testing")
+    ms.setEvalFunction(Agent.topLayerWeightedSizeEvaluationFunction)
     # m.setEvalFunction(Agent.winConditionEvaluationFunction)
 
     # game3.applyAction([(-3,-3), (1,1)], "b")
@@ -167,7 +169,7 @@ if __name__ == '__main__':
     # print(str(hash(game3)) + " " + str(hash(game3)))
     # print(hash(game3.board) - hash(game3.board.produce_symmetry("Initial")))
     # play_game(blue=ab, orange=ab_1, the_board=empty_board, agent_to_move=True)
-    # play_game(blue=r, orange=t, the_board=empty_board, agent_to_move=False)
+    #play_game(blue=r, orange=ms, the_board=empty_board, agent_to_move=False, print_info=True)
 
     time_measurement_agents = [RandomAgent(None, "b"),
                                MinimaxAgent(None, "b", 1,
@@ -181,7 +183,12 @@ if __name__ == '__main__':
                                TranspositionAgent(None, "b", 1,
                                                   evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
                                TranspositionAgent(None, "b", 2,
-                                                  evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction)]
+                                                  evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
+                               MoveSortingAgent(None, "b", 1,
+                                                  evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
+                               MoveSortingAgent(None, "b", 2,
+                                                  evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction)
+                               ]
 
     time_measurement_agent_names = ["Random Move Agent",
                                     "Minimax, Depth 1",
@@ -189,40 +196,75 @@ if __name__ == '__main__':
                                     "Alpha Beta Agent, Depth 1",
                                     "Alpha Beta Agent, Depth 2",
                                     "Transposition Agent, Depth 1",
-                                    "Transposition Agent, Depth 2"]
+                                    "Transposition Agent, Depth 2",
+                                    "Move Sorting Agent, Depth 1",
+                                    "Move Sorting Agent, Depth 2"]
     time_measurement_boards = [evaluationBoards.START_BOARD,
+                               evaluationBoards.START_BITBOARD,
                                evaluationBoards.OTW_BOARD,
+                               evaluationBoards.OTW_BITBOARD,
                                evaluationBoards.TTW_BOARD,
+                               evaluationBoards.TTW_BITBOARD,
                                evaluationBoards.CROWDED_BOARD,
+                               evaluationBoards.CROWDED_BITBOARD,
                                evaluationBoards.SIMPLE_BOARD,
+                               evaluationBoards.SIMPLE_BITBOARD,
                                evaluationBoards.LOW_BOARD,
+                               evaluationBoards.LOW_BITBOARD,
                                evaluationBoards.MID_BOARD,
-                               evaluationBoards.HIGH_BOARD]
+                               evaluationBoards.MID_BITBOARD,
+                               evaluationBoards.HIGH_BOARD,
+                               evaluationBoards.HIGH_BITBOARD]
     time_measurement_board_names = ["Starting Board",
+                                    "Starting Bitboard",
                                     "One Turn Win Board",
+                                    "One Turn Win Bitboard",
                                     "Two Turn Win Board",
+                                    "Two Turn Win Bitboard",
                                     "Crowded Board",
+                                    "Crowded Bitboard",
                                     "Simple Board",
+                                    "Simple Bitboard",
                                     "Small Pieces Board",
+                                    "Small Pieces Bitboard",
                                     "Medium Pieces Board",
-                                    "Large Pieces Board", ]
+                                    "Medium Pieces Bitboard",
+                                    "Large Pieces Board",
+                                    "Large Pieces Bitboard"]
     time_measurement_blue_pieces = [evaluationBoards.START_BLUE_PIECES,
+                                    evaluationBoards.START_BLUE_PIECES,
+                                    evaluationBoards.OTW_BLUE_PIECES,
                                     evaluationBoards.OTW_BLUE_PIECES,
                                     evaluationBoards.TTW_BLUE_PIECES,
+                                    evaluationBoards.TTW_BLUE_PIECES,
+                                    evaluationBoards.CROWDED_BLUE_PIECES,
                                     evaluationBoards.CROWDED_BLUE_PIECES,
                                     evaluationBoards.SIMPLE_BLUE_PIECES,
+                                    evaluationBoards.SIMPLE_BLUE_PIECES,
+                                    evaluationBoards.LOW_BLUE_PIECES,
                                     evaluationBoards.LOW_BLUE_PIECES,
                                     evaluationBoards.MID_BLUE_PIECES,
+                                    evaluationBoards.MID_BLUE_PIECES,
+                                    evaluationBoards.HIGH_BLUE_PIECES,
                                     evaluationBoards.HIGH_BLUE_PIECES]
     time_measurement_orange_pieces = [evaluationBoards.START_ORANGE_PIECES,
+                                      evaluationBoards.START_ORANGE_PIECES,
+                                      evaluationBoards.OTW_ORANGE_PIECES,
                                       evaluationBoards.OTW_ORANGE_PIECES,
                                       evaluationBoards.TTW_ORANGE_PIECES,
+                                      evaluationBoards.TTW_ORANGE_PIECES,
+                                      evaluationBoards.CROWDED_ORANGE_PIECES,
                                       evaluationBoards.CROWDED_ORANGE_PIECES,
                                       evaluationBoards.SIMPLE_ORANGE_PIECES,
+                                      evaluationBoards.SIMPLE_ORANGE_PIECES,
+                                      evaluationBoards.LOW_ORANGE_PIECES,
                                       evaluationBoards.LOW_ORANGE_PIECES,
                                       evaluationBoards.MID_ORANGE_PIECES,
+                                      evaluationBoards.MID_ORANGE_PIECES,
+                                      evaluationBoards.HIGH_ORANGE_PIECES,
                                       evaluationBoards.HIGH_ORANGE_PIECES]
-    time_measurement_next_move_booleans = [True, False, True, False, True, True, True, True]
+    time_measurement_next_move_booleans = [True, True, False, False, True, True, False, False, True, True, True, True,
+                                           True, True, True, True]
 
     """the_data = get_agent_runtime_data(agents=time_measurement_agents, names=time_measurement_agent_names,
                                       boards=time_measurement_boards, board_names=time_measurement_board_names,
@@ -249,47 +291,17 @@ if __name__ == '__main__':
                                        "Top Layer Weighted Size Evaluation Agent",
                                        "Threat Evaluation Agent", "Piece Location Agent"]
 
-    eval_function_data = simulate_games_for_agents(agents=evaluation_function_agents, names=evaluation_function_agent_names, games_per_agent=1000)
+    """eval_function_data = simulate_games_for_agents(agents=evaluation_function_agents, names=evaluation_function_agent_names, games_per_agent=1000)
     for i in eval_function_data.keys():
-        print(str(i) + " : " + str(eval_function_data[i]))
+        print(str(i) + " : " + str(eval_function_data[i]))"""
 
-    """    random_agent = RandomAgent(pieces=None, c="b")
-    wc_agent = AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
-                                     evaluationFunction=Agent.winConditionEvaluationFunction)
-    top_layer_agent = AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
-                                            evaluationFunction=Agent.topLayerEvaluationFunction)
-    top_layer_weighted_size_agent = AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
-                                                          evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction)
-    threat_agent = AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
-                                         evaluationFunction=Agent.threatBasedEvaluationFunction)
-    piece_location_agent = AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
-                                                 evaluationFunction=Agent.topLayerPieceLocationEvaluationFunction)
-
-    sim_results = simulate_games(blue=random_agent, orange=top_layer_agent, num_games=200)
-    print("blue wins: " + str(sim_results[0]))
-    print("orange wins: " + str(sim_results[1]))
-    print("moves: " + str(sim_results[2]))"""
-
-    # play_game(blue=r, orange=t, the_board=empty_board, agent_to_move=True)
+    #play_game(blue=ab, orange=r, the_board=evaluationBoards.START_BITBOARD, agent_to_move=True, print_info=True)
 
     # todo always make sure agents have the right pieces
-    # print(ab.getAction(game))
-    # a.getAction(game)
 
-    # tp = TimedProcess(_object=t, f="getAction", params={"gameState": game3})
-    # tp.run()
-    # print(tp.getTime())
-
-    # tp = TimedProcess(_object=ab, f="getAction", params={"gameState": game3})
-    # tp.run()
-    # print(tp.getTime())
-
-    # print(evaluationBoards.CROWDED_BOARD)
-    # print(str(game.get_symmetries()))
-
-    """tps = TimedProcessSeries(_object=ab, f="getAction", params=[{"gameState": game3}] * 2)
-    tps.run()
-    print(tps.getMinTime())
-    print(tps.getAverageTime())"""
+    # for bitboards
+    """print(format(int((0b000_100_100 | int("0b010101010", 2))), '#011b'))
+    print(format(int((int("0b000_100_100", 2) | int("0b010101010", 2))), '#011b'))
+    print(format(0b000_100_100 | 0b010_101_010, '#011b'))"""
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

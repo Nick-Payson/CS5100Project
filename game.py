@@ -1,7 +1,7 @@
 import copy
 
 from piece import Piece
-from board import BoardState
+from board import BoardState, ABoardState
 
 
 class GameState:  # Doing this to bypass the fact that Agent and GameState depend on each other
@@ -105,7 +105,7 @@ class Agent:
                 sum_pieces += val
         return sum_pieces
 
-    def threatBasedEvaluationFunction(self, state: GameState) -> float:
+    def threatBasedEvaluationFunction(self, state: GameState) -> float: #todo change to work with bitboard representation too
         wc = self.winConditionEvaluationFunction(state=state)
         if wc != 0:
             return wc
@@ -178,7 +178,7 @@ class GameState:
     A GameState specifies the full game state
     """
 
-    def __init__(self, blue: Agent, orange: Agent, blue_to_move: bool, board: BoardState):
+    def __init__(self, blue: Agent, orange: Agent, blue_to_move: bool, board: ABoardState):
         self.board = board
         self.blue = blue
         self.orange = orange
@@ -291,8 +291,7 @@ class GameState:
 
     def __hash__(self):
         # Hash the game state (board and whose turn it is) for transposition tables
-        board_strings = self.board.get_board_strings()
-        return hash(board_strings[0] + board_strings[1] + board_strings[2] + str(self.blueToMove))
+        return self.board.doTheHash(blue_to_move=self.blueToMove)
 
     def get_symmetries(self):
         # Return a list of hashes for all symmetrical boards for transposition tables, and the type of symmetry
@@ -302,8 +301,7 @@ class GameState:
 
         for s in symmetry_types:
             board = self.board.produce_symmetry(symmetry_type=s)
-            board_strings = board.get_board_strings()
-            h = hash(board_strings[0] + board_strings[1] + board_strings[2] + str(self.blueToMove))
+            h = board.doTheHash(blue_to_move=self.blueToMove)
             #print(str(board) + " " + str(h))
             symmetry_list.append((h, s))
 
