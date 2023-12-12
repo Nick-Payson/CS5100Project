@@ -2,13 +2,11 @@
 from copy import deepcopy
 
 import evaluationBoards
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
 from board import BoardState
 from piece import Piece
 from game import GameState, Agent
-from gameAgents import HumanAtKeyboard, MinimaxAgent, AlphaBetaMinimaxAgent, RandomAgent, TranspositionAgent, MoveSortingAgent
+from gameAgents import (HumanAtKeyboard, MinimaxAgent, AlphaBetaMinimaxAgent, RandomAgent, TranspositionAgent,
+                        MoveSortingAgent, IterativeDeepeningAgent)
 from timedProcess import TimedProcess, TimedProcessSeries
 import os
 import sys
@@ -103,12 +101,14 @@ def time_moves_for_agent(agent: Agent, boards: [BoardState], board_names: [str],
         if color_to_move_booleans[i]:  # agent should be blue
             agent.setColor("b")
             agent.setPieces(deepcopy(blue_pieces[i]))
-            game = GameState(blue=agent, orange=RandomAgent(deepcopy(orange_pieces[i]), "o"), blue_to_move=True, board=boards[i])
+            game = GameState(blue=agent, orange=RandomAgent(deepcopy(orange_pieces[i]), "o"), blue_to_move=True,
+                             board=boards[i])
 
         else:  # agent is orange
             agent.setColor("o")
             agent.setPieces(deepcopy(orange_pieces[i]))
-            game = GameState(blue=RandomAgent(deepcopy(blue_pieces[i]), "b"), orange=agent, blue_to_move=False, board=boards[i])
+            game = GameState(blue=RandomAgent(deepcopy(blue_pieces[i]), "b"), orange=agent, blue_to_move=False,
+                             board=boards[i])
 
         tps = TimedProcess(_object=agent, f="getAction", params={"gameState": game})
         tps.run()
@@ -158,18 +158,11 @@ if __name__ == '__main__':
     ms = MoveSortingAgent(evaluationBoards.START_ORANGE_PIECES, "o", 2, storage_file_name="testing")
     ms.setEvalFunction(Agent.topLayerWeightedSizeEvaluationFunction)
     # m.setEvalFunction(Agent.winConditionEvaluationFunction)
-
-    # game3.applyAction([(-3,-3), (1,1)], "b")
-    # t.add_symmetries_to_dictionary(state=game3, the_move=[(-2,-2), (0,0)], best_value=4, depth=0)
-    # print(t.moveDictionary)
-    # print("done")
-    # game3.get_symmetries()
-    # print("aaaaa")
     # print(t.getAction(game3))
     # print(str(hash(game3)) + " " + str(hash(game3)))
     # print(hash(game3.board) - hash(game3.board.produce_symmetry("Initial")))
     # play_game(blue=ab, orange=ab_1, the_board=empty_board, agent_to_move=True)
-    #play_game(blue=r, orange=ms, the_board=empty_board, agent_to_move=False, print_info=True)
+    # play_game(blue=r, orange=ms, the_board=empty_board, agent_to_move=False, print_info=True)
 
     time_measurement_agents = [RandomAgent(None, "b"),
                                MinimaxAgent(None, "b", 1,
@@ -180,25 +173,42 @@ if __name__ == '__main__':
                                                      evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
                                AlphaBetaMinimaxAgent(None, "b", 2,
                                                      evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
+                               MoveSortingAgent(None, "b", 1,
+                                                evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
+                               MoveSortingAgent(None, "b", 2,
+                                                evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
                                TranspositionAgent(None, "b", 1,
                                                   evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
                                TranspositionAgent(None, "b", 2,
-                                                  evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
-                               MoveSortingAgent(None, "b", 1,
-                                                  evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction),
-                               MoveSortingAgent(None, "b", 2,
                                                   evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction)
                                ]
+
+    # run iterative deepening agents separately, they might be shorting somehow and are returning 0 time when run all together
+    """time_measurement_agents = [RandomAgent(None, "b"),
+                               IterativeDeepeningAgent(color="b", pieces=None,
+                                                       internalAgent=TranspositionAgent(None, "b", 1,
+                                                                                        evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction,
+                                                                                        storage_file_name="a"),
+                                                       depth=1),
+                               IterativeDeepeningAgent(color="b", pieces=None,
+                                                       internalAgent=TranspositionAgent(None, "b", 2,
+                                                                                        evaluationFunction=Agent.topLayerWeightedSizeEvaluationFunction,
+                                                                                        storage_file_name="b"),
+                                                       depth=2)
+                               ]"""
 
     time_measurement_agent_names = ["Random Move Agent",
                                     "Minimax, Depth 1",
                                     "Minimax, Depth 2",
                                     "Alpha Beta Agent, Depth 1",
                                     "Alpha Beta Agent, Depth 2",
-                                    "Transposition Agent, Depth 1",
-                                    "Transposition Agent, Depth 2",
                                     "Move Sorting Agent, Depth 1",
-                                    "Move Sorting Agent, Depth 2"]
+                                    "Move Sorting Agent, Depth 2",
+                                    "Transposition Agent, Depth 1",
+                                    "Transposition Agent, Depth 2"]
+    """time_measurement_agent_names = ["Random Move Agent",
+                                    "Iterative Deepening Agent, Depth 1",
+                                    "Iterative Deepening Agent, Depth 2"]"""
     time_measurement_boards = [evaluationBoards.START_BOARD,
                                evaluationBoards.START_BITBOARD,
                                evaluationBoards.OTW_BOARD,
@@ -276,7 +286,7 @@ if __name__ == '__main__':
         print(str(i) + " : " + str(the_data[i]))"""
 
     evaluation_function_agents = [AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
-                                     evaluationFunction=Agent.winConditionEvaluationFunction),
+                                                        evaluationFunction=Agent.winConditionEvaluationFunction),
                                   AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
                                                         evaluationFunction=Agent.topLayerEvaluationFunction),
                                   AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
@@ -284,24 +294,25 @@ if __name__ == '__main__':
                                   AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
                                                         evaluationFunction=Agent.threatBasedEvaluationFunction),
                                   AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
-                                                        evaluationFunction=Agent.topLayerPieceLocationEvaluationFunction)
+                                                        evaluationFunction=Agent.topLayerPieceLocationEvaluationFunction),
+                                  AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
+                                                        evaluationFunction=Agent.handEvaluationFunction),
+                                  AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
+                                                        evaluationFunction=Agent.threatAndLocationEvalFunction),
+                                  AlphaBetaMinimaxAgent(pieces=None, c="o", depth=1,
+                                                        evaluationFunction=Agent.threatLocationHandEvalFunction)
                                   ]
 
     evaluation_function_agent_names = ["Win Condition Agent", "Top Layer Evaluation Agent",
                                        "Top Layer Weighted Size Evaluation Agent",
-                                       "Threat Evaluation Agent", "Piece Location Agent"]
+                                       "Threat Evaluation Agent", "Piece Location Agent", "Hand Evaluation Agent",
+                                       "Threat and Location Agent", "Threat Location Hand Evaluation Agent"]
 
-    """eval_function_data = simulate_games_for_agents(agents=evaluation_function_agents, names=evaluation_function_agent_names, games_per_agent=1000)
+    eval_function_data = simulate_games_for_agents(agents=evaluation_function_agents, names=evaluation_function_agent_names, games_per_agent=1000)
     for i in eval_function_data.keys():
-        print(str(i) + " : " + str(eval_function_data[i]))"""
+        print(str(i) + " : " + str(eval_function_data[i]))
 
-    #play_game(blue=ab, orange=r, the_board=evaluationBoards.START_BITBOARD, agent_to_move=True, print_info=True)
+    # play_game(blue=ab, orange=r, the_board=evaluationBoards.START_BITBOARD, agent_to_move=True, print_info=True)
 
-    # todo always make sure agents have the right pieces
-
-    # for bitboards
-    """print(format(int((0b000_100_100 | int("0b010101010", 2))), '#011b'))
-    print(format(int((int("0b000_100_100", 2) | int("0b010101010", 2))), '#011b'))
-    print(format(0b000_100_100 | 0b010_101_010, '#011b'))"""
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/

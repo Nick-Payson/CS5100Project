@@ -1,8 +1,7 @@
 import copy
 
 from piece import Piece
-from board import BoardState, ABoardState
-
+from board import ABoardState
 
 class GameState:  # Doing this to bypass the fact that Agent and GameState depend on each other
     pass
@@ -110,39 +109,7 @@ class Agent:
         if wc != 0:
             return wc
 
-        threatCounts = {"b": 0, "o": 0}
-        for c in threatCounts:
-            for row in range(3):
-                piecesInRow = 3
-                piecesInCol = 3
-                for col in range(3):
-                    if str(state.board.board[row][col])[0:1:1] != c:
-                        piecesInRow = piecesInRow - 1
-                    if str(state.board.board[col][row])[0:1:1] != c:
-                        piecesInCol = piecesInCol - 1
-                if piecesInRow >= 2:
-                    threatCounts[c] += 1
-                if piecesInCol >= 2:
-                    threatCounts[c] += 1
-
-            diagonalPieces = 3
-            otherDiagonalPieces = 3
-            for i in range(3):
-                if str(state.board.board[i][i])[0:1:1] != c:
-                    diagonalPieces -= 1
-                if str(state.board.board[i][2 - i])[0:1:1] != c:
-                    otherDiagonalPieces -= 1
-
-            if diagonalPieces >= 2:
-                threatCounts[c] += 1
-            if otherDiagonalPieces >= 2:
-                threatCounts[c] += 1
-
-        netThreats = threatCounts["o"] - threatCounts["b"]
-        if self.color == "b":
-            netThreats *= -1
-
-        return netThreats
+        return state.board.threatBasedEval(self.color)
 
     def topLayerPieceLocationEvaluationFunction(self, state: GameState) -> float:
         wc = self.winConditionEvaluationFunction(state=state)
@@ -165,7 +132,34 @@ class Agent:
                 sum_pieces += val
         return sum_pieces
 
-    #todo more eval functions like -valueOfPiecesInHand, combined ones with threats
+
+    def handEvaluationFunction(self, state: GameState) -> float:
+        wc = self.winConditionEvaluationFunction(state=state)
+        if wc != 0:
+            return wc
+
+        value = 0
+        for i in range(3):
+            for p in self.pieces[i]:
+                if p is not None:
+                    value -= p.size
+        return value
+
+    def threatAndLocationEvalFunction(self, state: GameState) -> float:
+        wc = self.winConditionEvaluationFunction(state=state)
+        if wc != 0:
+            return wc
+
+        return (self.threatBasedEvaluationFunction(state=state)
+                + self.topLayerPieceLocationEvaluationFunction(state=state))
+
+    def threatLocationHandEvalFunction(self, state: GameState) -> float:
+        wc = self.winConditionEvaluationFunction(state=state)
+        if wc != 0:
+            return wc
+
+        return (self.threatBasedEvaluationFunction(state=state)
+                + self.topLayerPieceLocationEvaluationFunction(state=state) + self.handEvaluationFunction(state=state))
 
     def __deepcopy__(self, memodict={}):
         new_color = self.color

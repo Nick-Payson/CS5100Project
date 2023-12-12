@@ -89,7 +89,7 @@ class MinimaxAgent(Agent):
         value, move = self.max_agent(state=gameState, depth=0)
         return move
 
-    def max_agent(self, state: GameState, depth):
+    def max_agent(self, state: GameState, depth: int):
         # print("start of max")
         if depth >= self.depth or state.isOver():
             return self.evaluationFunction.__call__(self, state=state), None
@@ -110,7 +110,7 @@ class MinimaxAgent(Agent):
 
         return best_val, chosen_move
 
-    def min_agent(self, state: GameState, depth):
+    def min_agent(self, state: GameState, depth: int):
         if depth >= self.depth or state.isOver():
             return self.evaluationFunction.__call__(self, state=state), None
 
@@ -500,7 +500,7 @@ class MoveSortingAgent(Agent):
 
         #sort available actions here
         action_value_pairs = []
-        for act in possible_actions:  # todo finish and test this
+        for act in possible_actions:
             new_state: GameState = state.generateSuccessor(agentColor=agent.color, action=act)
 
             # play the instant win
@@ -607,3 +607,20 @@ class MoveSortingAgent(Agent):
         #Don't copy the dictionary because we want the agent to add to it from all game tree paths
         return MoveSortingAgent(pieces=new_pieces, evaluationFunction=new_eval_function, c=self.color,
                                      depth=self.depth, storage_file_name=self.storage_file_name, moveDictionary=self.moveDictionary)
+
+
+class IterativeDeepeningAgent(Agent):
+
+    def __init__(self, color: str, pieces, internalAgent: Agent, depth: int):
+        self.internalAgent = internalAgent
+        self.depth = depth
+        super().__init__(color=color, pieces=pieces)
+
+    def getAction(self, gameState: GameState):
+        best_move = None
+        for d in range(1, self.depth + 1):
+            best_move = self.internalAgent.getAction(gameState=gameState)
+
+        return best_move
+
+#todo move trim agent, lose optimality but look further ahead

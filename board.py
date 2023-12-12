@@ -1,3 +1,4 @@
+
 from piece import Piece
 from square import Square
 from copy import deepcopy
@@ -10,7 +11,7 @@ def piece_to_str(p: Piece) -> str:
         return p.color + str(p.size)
 
 
-class ABoardState:  # todo change board state calls to use this abstract class, make the methods
+class ABoardState:  # todo threatBasedEval
 
     def __str__(self):
         pass
@@ -41,6 +42,9 @@ class ABoardState:  # todo change board state calls to use this abstract class, 
         pass
 
     def produce_symmetry(self, symmetry_type: str):
+        pass
+
+    def threatBasedEval(self, color: str):
         pass
 
 
@@ -134,6 +138,41 @@ class BoardState(ABoardState):
             new_board_strings[s] = layer_string
 
         return new_board_strings
+
+    def threatBasedEval(self, color: str) -> float:
+        threatCounts = {"b": 0, "o": 0}
+        for c in threatCounts:
+            for row in range(3):
+                piecesInRow = 3
+                piecesInCol = 3
+                for col in range(3):
+                    if str(self.board[row][col])[0:1:1] != c:
+                        piecesInRow = piecesInRow - 1
+                    if str(self.board[col][row])[0:1:1] != c:
+                        piecesInCol = piecesInCol - 1
+                if piecesInRow >= 2:
+                    threatCounts[c] += 1
+                if piecesInCol >= 2:
+                    threatCounts[c] += 1
+
+            diagonalPieces = 3
+            otherDiagonalPieces = 3
+            for i in range(3):
+                if str(self.board[i][i])[0:1:1] != c:
+                    diagonalPieces -= 1
+                if str(self.board[i][2 - i])[0:1:1] != c:
+                    otherDiagonalPieces -= 1
+
+            if diagonalPieces >= 2:
+                threatCounts[c] += 1
+            if otherDiagonalPieces >= 2:
+                threatCounts[c] += 1
+
+        netThreats = threatCounts["o"] - threatCounts["b"]
+        if color == "b":
+            netThreats *= -1
+
+        return netThreats
 
     def __deepcopy__(self, memodict={}):
         new_squares = []
@@ -286,7 +325,6 @@ class BitBoardState(ABoardState):
                             else:
                                 string_rep += "0"
 
-                        # todo make sure right string generated and board strings stay in binary format
                         self.blue_board[level] = self.blue_board[level] | int(string_rep, 2)
 
                     elif "o" in pieces[j]:
@@ -434,6 +472,41 @@ class BitBoardState(ABoardState):
                     layer_string += "\n"
             new_board_strings[s] = layer_string
         return new_board_strings
+
+    def threatBasedEval(self, color: str) -> float:
+
+        c_pieces = 0b000000000
+        c2_pieces = 0b000000000
+
+        c_pieces = c_pieces | self.blue_board[0]  # add small blue pieces
+        c_pieces = c_pieces ^ (c_pieces & self.orange_board[1])  # remove pieces covered by middle orange pieces
+        c_pieces = c_pieces | self.blue_board[1]  # add middle blue pieces
+        c_pieces = c_pieces ^ (c_pieces & self.orange_board[2])  # remove pieces covered by large orange pieces
+        c_pieces = c_pieces | self.blue_board[2]  # add large blue pieces
+
+        c2_pieces = c2_pieces | self.orange_board[0]  # add small orange pieces
+        c2_pieces = c2_pieces ^ (c2_pieces & self.blue_board[1])  # remove pieces covered by middle blue pieces
+        c2_pieces = c2_pieces | self.orange_board[1]  # add middle orange pieces
+        c2_pieces = c2_pieces ^ (c2_pieces & self.blue_board[2])  # remove pieces covered by large blue pieces
+        c2_pieces = c2_pieces | self.orange_board[2]  # add large orange pieces
+
+        win_conditions = [0b111000000, 0b000111000, 0b000000111,#todo finish checking
+                          0b100100100, 0b010010010, 0b001001001,
+                          0b100010001, 0b001010100]
+        pieces = {"c": c_pieces, "c2": c2_pieces}
+        symbols = ["c", "c2"]
+        counts = {"c": 0, "c2": 0}
+        for s in symbols:
+            for w in win_conditions:
+                wc = w & pieces[s]
+                if wc not in (0,2,4,8,16,32,128,256,512):
+                    # two or more 1s added, threat
+                    counts[s] = counts[s] + 1
+
+        val = counts["c"] - counts["c2"]
+        if color == "o":
+            val = val * -1
+        return val
 
     def __deepcopy__(self, memodict={}):
         new_orange_top = deepcopy(self.orange_board[2])
